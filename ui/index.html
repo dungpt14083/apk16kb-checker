@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APK 16KB Checker — Kiểm tra Page Size Android</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─── DESIGN TOKENS ─────────────────────────────────────────── */
+:root {
+  --bg0:     #060A10;
+  --bg1:     #0D1117;
+  --bg2:     #161B22;
+  --bg3:     #1C2230;
+  --border:  #21262D;
+  --border2: #30363D;
+
+  --txt0: #F0F6FC;
+  --txt1: #C9D1D9;
+  --txt2: #8B949E;
+  --txt3: #484F58;
+
+  --green:   #3FB950;
+  --green-bg:#122520;
+  --yellow:  #D29922;
+  --yellow-bg:#201B0D;
+  --red:     #F85149;
+  --red-bg:  #1E0A08;
+  --blue:    #58A6FF;
+  --blue-bg: #0D2033;
+  --purple:  #8B7DFA;
+  --cyan:    #39D5F4;
+
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --sidebar-w: 220px;
+  --header-h: 60px;
+  --transition: 0.18s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ─── RESET ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg0);
+  color: var(--txt1);
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg1); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--txt3); }
+
+/* ─── SIDEBAR ────────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--bg1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  transition: transform var(--transition);
+}
+.sidebar-logo {
+  padding: 1.2rem 1rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.logo-icon {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, #58A6FF, #8B7DFA);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.logo-text { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--txt0); line-height: 1.2; }
+.logo-sub  { font-size: 0.7rem; color: var(--txt3); }
+
+.sidebar-nav { padding: 1rem 0.6rem; flex: 1; }
+.nav-label { font-size: 0.65rem; font-weight: 600; color: var(--txt3); text-transform: uppercase; letter-spacing: 0.1em; padding: 0 0.5rem; margin-bottom: 0.3rem; margin-top: 0.8rem; }
+.nav-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--txt2);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all var(--transition);
+  margin-bottom: 2px;
+  position: relative;
+  user-select: none;
+}
+.nav-item:hover { background: var(--bg2); color: var(--txt1); }
+.nav-item.active {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 3px;
+  background: var(--blue);
+  border-radius: 0 2px 2px 0;
+}
+.nav-icon { font-size: 1rem; width: 1.2rem; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.sidebar-footer {
+  padding: 0.8rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.72rem;
+  color: var(--txt3);
+  text-align: center;
+}
+.sidebar-footer span { color: var(--blue); }
+
+/* ─── MAIN ───────────────────────────────────────────────────── */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── TOPBAR ─────────────────────────────────────────────────── */
+.topbar {
+  height: var(--header-h);
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  gap: 1rem;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; color: var(--txt0); }
+.topbar-sub { color: var(--txt3); font-size: 0.78rem; }
+.topbar-spacer { flex: 1; }
+.btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; border: none;
+  transition: all var(--transition);
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: #79b8ff; }
+.btn-ghost { background: transparent; color: var(--txt2); border: 1px solid var(--border2); }
+.btn-ghost:hover { background: var(--bg2); color: var(--txt1); }
+.btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid #3d1210; }
+.btn-danger:hover { background: #2d1211; }
+.btn-success { background: var(--green-bg); color: var(--green); border: 1px solid #1a3d28; }
+.btn-success:hover { background: #1a3d28; }
+.btn-sm { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── CONTENT ────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.page { display: none; padding: 1.5rem; min-height: calc(100vh - var(--header-h)); }
+.page.active { display: block; }
+
+/* ─── CARDS ──────────────────────────────────────────────────── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.card-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: var(--txt0); }
+.card-body { padding: 1.25rem; }
+
+/* ─── STAT CARDS ─────────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.stat-card.total::after  { background: linear-gradient(90deg, var(--blue), var(--purple)); }
+.stat-card.ok::after     { background: var(--green); }
+.stat-card.warn::after   { background: var(--yellow); }
+.stat-card.fail::after   { background: var(--red); }
+
+.stat-card:hover { border-color: var(--border2); }
+
+.stat-label { font-size: 0.72rem; font-weight: 600; color: var(--txt3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+.stat-value { font-family: 'Syne', sans-serif; font-size: 2.4rem; font-weight: 800; line-height: 1; }
+.stat-card.total .stat-value { color: var(--blue); }
+.stat-card.ok    .stat-value { color: var(--green); }
+.stat-card.warn  .stat-value { color: var(--yellow); }
+.stat-card.fail  .stat-value { color: var(--red); }
+.stat-sub { font-size: 0.75rem; color: var(--txt3); margin-top: 0.3rem; }
+.stat-icon { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 2rem; opacity: 0.07; }
+
+/* ─── FILE DROP ZONE ─────────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius-xl);
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--bg2);
+  position: relative;
+  overflow: hidden;
+}
+.drop-zone::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, #58a6ff08, transparent 60%);
+  pointer-events: none;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--blue);
+  background: var(--blue-bg);
+}
+.drop-zone.dragover { transform: scale(1.005); }
+.drop-icon { font-size: 3.5rem; margin-bottom: 1rem; display: block; line-height: 1; }
+.drop-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; color: var(--txt0); margin-bottom: 0.5rem; }
+.drop-sub { color: var(--txt2); font-size: 0.85rem; line-height: 1.5; }
+.drop-formats { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1rem; }
+.fmt-badge { background: var(--bg3); border: 1px solid var(--border2); padding: 0.2rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: var(--txt2); }
+#fileInput { display: none; }
+
+/* ─── PROGRESS ───────────────────────────────────────────────── */
+.progress-section {
+  display: none;
+  margin-top: 1.5rem;
+}
+.progress-section.visible { display: block; }
+.progress-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+.progress-label { font-size: 0.82rem; color: var(--txt2); }
+.progress-pct { font-size: 0.82rem; font-family: 'JetBrains Mono', monospace; color: var(--blue); font-weight: 600; }
+.progress-bar-track {
+  height: 6px;
+  background: var(--bg3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--purple));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+.progress-steps { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+.step-pill {
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--bg3);
+  color: var(--txt3);
+  transition: all var(--transition);
+}
+.step-pill.active { background: var(--blue-bg); color: var(--blue); }
+.step-pill.done   { background: var(--green-bg); color: var(--green); }
+
+/* ─── STATUS BADGES ──────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-ok   { background: var(--green-bg);  color: var(--green);  border: 1px solid #1d4d2e; }
+.badge-warn { background: var(--yellow-bg); color: var(--yellow); border: 1px solid #3d2e0d; }
+.badge-fail { background: var(--red-bg);    color: var(--red);    border: 1px solid #3d1210; }
+.badge-unk  { background: var(--bg3);       color: var(--txt3);   border: 1px solid var(--border2); }
+
+/* ─── TABLE ──────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+thead tr { border-bottom: 1px solid var(--border2); }
+th {
+  padding: 0.65rem 0.9rem;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--txt3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+td { padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg3); }
+.lib-name { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--txt0); }
+.abi-badge {
+  background: #1a1040;
+  color: #a5b4fc;
+  border: 1px solid #2d2060;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+.align-val { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; }
+.row-detail { max-width: 280px; }
+.detail-desc { color: var(--txt2); font-size: 0.78rem; }
+.detail-fix { margin-top: 0.4rem; background: var(--bg3); padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #fbbf24; line-height: 1.5; white-space: pre-wrap; border-left: 2px solid #fbbf24; }
+
+/* ─── FILTER BAR ─────────────────────────────────────────────── */
+.filter-bar { display: flex; gap: 0.5rem; align-items: center; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.filter-btn { padding: 0.3rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all var(--transition); background: transparent; border: 1px solid var(--border2); color: var(--txt2); font-family: inherit; }
+.filter-btn:hover { border-color: var(--blue); color: var(--blue); }
+.filter-btn.active { background: var(--blue-bg); color: var(--blue); border-color: #1d3d5e; }
+.filter-btn.f-ok.active   { background: var(--green-bg);  color: var(--green);  border-color: #1d4d2e; }
+.filter-btn.f-warn.active { background: var(--yellow-bg); color: var(--yellow); border-color: #3d2e0d; }
+.filter-btn.f-fail.active { background: var(--red-bg);    color: var(--red);    border-color: #3d1210; }
+.search-wrap { position: relative; flex: 1; min-width: 160px; max-width: 260px; margin-left: auto; }
+.search-input {
+  width: 100%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem 0.35rem 2rem;
+  color: var(--txt1); font-size: 0.8rem;
+  font-family: inherit; outline: none;
+}
+.search-input:focus { border-color: var(--blue); }
+.search-icon { position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--txt3); font-size: 0.85rem; pointer-events: none; }
+
+/* ─── LOGS ───────────────────────────────────────────────────── */
+.log-container {
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  height: 420px;
+  overflow-y: auto;
+  padding: 1rem;
+  line-height: 1.8;
+  color: var(--txt2);
+}
+.log-line { padding: 0.05rem 0; }
+.log-line.log-ok   { color: var(--green); }
+.log-line.log-warn { color: var(--yellow); }
+.log-line.log-err  { color: var(--red); }
+.log-line.log-info { color: var(--blue); }
+.log-line.log-step { color: var(--cyan); }
+
+/* ─── CHART BAR ──────────────────────────────────────────────── */
+.chart-bar { display: flex; gap: 0.3rem; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 0.5rem; }
+.chart-seg { border-radius: 0; height: 100%; transition: width 0.6s ease; }
+.chart-seg:first-child { border-radius: 4px 0 0 4px; }
+.chart-seg:last-child  { border-radius: 0 4px 4px 0; }
+
+/* ─── OVERALL STATUS ─────────────────────────────────────────── */
+.overall-banner {
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid;
+  display: flex; align-items: center; gap: 1rem;
+}
+.overall-banner.ok   { background: var(--green-bg);  border-color: #1d4d2e; color: var(--green); }
+.overall-banner.warn { background: var(--yellow-bg); border-color: #3d2e0d; color: var(--yellow); }
+.overall-banner.fail { background: var(--red-bg);    border-color: #3d1210; color: var(--red); }
+.overall-icon { font-size: 2rem; flex-shrink: 0; }
+.overall-text { flex: 1; }
+.overall-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+.overall-sub   { font-size: 0.8rem; opacity: 0.8; margin-top: 0.2rem; }
+
+/* ─── FIX GUIDE ──────────────────────────────────────────────── */
+.fix-guide { display: grid; gap: 0.75rem; }
+.fix-item { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); padding: 0.9rem 1rem; }
+.fix-item-title { font-size: 0.78rem; font-weight: 600; color: var(--txt2); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem; }
+.fix-code { background: var(--bg0); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.6rem 0.8rem; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--cyan); position: relative; }
+.copy-btn { position: absolute; right: 0.5rem; top: 0.5rem; background: var(--bg2); border: 1px solid var(--border2); color: var(--txt3); border-radius: 4px; padding: 0.15rem 0.4rem; font-size: 0.65rem; cursor: pointer; transition: all var(--transition); }
+.copy-btn:hover { color: var(--blue); border-color: var(--blue); }
+
+/* ─── EMPTY STATE ────────────────────────────────────────────── */
+.empty-state { text-align: center; padding: 4rem 2rem; color: var(--txt3); }
+.empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-title { font-family: 'Syne', sans-serif; font-size: 1rem; color: var(--txt2); margin-bottom: 0.5rem; }
+.empty-sub { font-size: 0.82rem; }
+
+/* ─── SETTINGS ───────────────────────────────────────────────── */
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+.setting-row:last-child { border-bottom: none; }
+.setting-info { flex: 1; }
+.setting-label { font-size: 0.85rem; color: var(--txt0); font-weight: 500; }
+.setting-desc { font-size: 0.75rem; color: var(--txt3); margin-top: 0.2rem; }
+.toggle { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--bg3); border: 1px solid var(--border2); border-radius: 20px; transition: all var(--transition); }
+.toggle-slider:before { content: ''; position: absolute; height: 14px; width: 14px; left: 2px; bottom: 2px; background: var(--txt3); border-radius: 50%; transition: all var(--transition); }
+.toggle input:checked + .toggle-slider { background: var(--blue-bg); border-color: var(--blue); }
+.toggle input:checked + .toggle-slider:before { transform: translateX(16px); background: var(--blue); }
+
+/* ─── MISC ───────────────────────────────────────────────────── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.mt-sm { margin-top: 0.5rem; }
+.mt    { margin-top: 1rem; }
+.mt-lg { margin-top: 1.5rem; }
+.divider { height: 1px; background: var(--border); margin: 1rem 0; }
+.text-muted { color: var(--txt3); font-size: 0.78rem; }
+.tag { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; background: var(--bg3); color: var(--txt2); border: 1px solid var(--border2); }
+.row { display: flex; align-items: center; gap: 0.75rem; }
+.gap-sm { gap: 0.4rem; }
+
+/* ─── ANIM ───────────────────────────────────────────────────── */
+@keyframes fadeUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+@keyframes pulse  { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+@keyframes spin   { to { transform: rotate(360deg); } }
+.fade-in { animation: fadeUp 0.25s ease forwards; }
+.pulse   { animation: pulse 1.5s ease infinite; }
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: repeat(2,1fr); }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { transform: translateX(-220px); width: 220px; }
+  .sidebar.open { transform: translateX(0); }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── SIDEBAR ─────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">📱</div>
+    <div>
+      <div class="logo-text">16KB Checker</div>
+      <div class="logo-sub">Android Page Size Tool</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-label">Tổng quan</div>
+    <div class="nav-item active" onclick="navigate('home')">
+      <span class="nav-icon">🏠</span> Trang chủ
+    </div>
+
+    <div class="nav-label">Công cụ</div>
+    <div class="nav-item" onclick="navigate('checker')">
+      <span class="nav-icon">🔍</span> Kiểm tra APK/AAB
+    </div>
+    <div class="nav-item" onclick="navigate('results')">
+      <span class="nav-icon">📊</span> Kết quả phân tích
+      <span class="nav-badge" id="navBadge" style="display:none">0</span>
+    </div>
+    <div class="nav-item" onclick="navigate('logs')">
+      <span class="nav-icon">📋</span> Logs
+    </div>
+
+    <div class="nav-label">Hỗ trợ</div>
+    <div class="nav-item" onclick="navigate('settings')">
+      <span class="nav-icon">⚙️</span> Cài đặt
+    </div>
+    <div class="nav-item" onclick="navigate('guide')">
+      <span class="nav-icon">📖</span> Hướng dẫn
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    v1.0.0 — <span>APK 16KB Checker</span><br>
+    Dành cho Android Game Dev
+  </div>
+</aside>
+
+<!-- ─── MAIN ─────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div>
+      <div class="topbar-title" id="topbarTitle">🏠 Trang chủ</div>
+      <div class="topbar-sub" id="topbarSub">Tổng quan công cụ kiểm tra 16KB page size</div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <button class="btn btn-ghost btn-sm" onclick="navigate('checker')">➕ Phân tích mới</button>
+    <div id="exportBtns" style="display:flex;gap:0.4rem;display:none">
+      <button class="btn btn-ghost btn-sm" onclick="exportReport('json')">⬇️ JSON</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportReport('markdown')">⬇️ MD</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportReport('html')">⬇️ HTML</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ═══ PAGE: HOME ═══════════════════════════════════════ -->
+    <div id="page-home" class="page active">
+      <div style="max-width: 800px">
+        <div class="card" style="margin-bottom:1.25rem;overflow:visible">
+          <div class="card-body" style="padding:2rem">
+            <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
+              <div style="font-size:4rem;line-height:1">📱</div>
+              <div style="flex:1;min-width:200px">
+                <h1 style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.7rem;color:var(--txt0);margin-bottom:0.4rem">
+                  Android 16KB Page Size Checker
+                </h1>
+                <p style="color:var(--txt2);line-height:1.6;font-size:0.9rem">
+                  Công cụ kiểm tra tương thích <strong style="color:var(--blue)">16KB memory page size</strong> cho APK/AAB Android.
+                  Google Play yêu cầu tất cả native library (<code>.so</code>) phải hỗ trợ 16KB alignment từ năm 2025.
+                </p>
+                <div class="mt" style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                  <button class="btn btn-primary" onclick="navigate('checker')">🔍 Bắt đầu kiểm tra</button>
+                  <button class="btn btn-ghost" onclick="navigate('guide')">📖 Xem hướng dẫn</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:1.25rem">
+          <div class="card">
+            <div class="card-header"><span>📌</span><span class="card-title">Tại sao cần kiểm tra?</span></div>
+            <div class="card-body">
+              <p style="color:var(--txt2);font-size:0.84rem;line-height:1.7">
+                Android 15 trở lên hỗ trợ <strong style="color:var(--yellow)">16KB page size</strong> để cải thiện hiệu năng.
+                Google Play <strong style="color:var(--red)">bắt buộc</strong> tất cả app có native library phải tương thích
+                kể từ <strong style="color:var(--txt0)">1/11/2025</strong> cho app mới và <strong style="color:var(--txt0)">1/6/2026</strong>
+                cho app update.
+              </p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span>🎮</span><span class="card-title">Dành cho Unity Game Dev</span></div>
+            <div class="card-body">
+              <p style="color:var(--txt2);font-size:0.84rem;line-height:1.7">
+                Unity IL2CPP build thường tạo ra <code>libil2cpp.so</code> và <code>libunity.so</code> với 4KB alignment.
+                Tool này giúp bạn phát hiện và sửa lỗi <strong style="color:var(--txt0)">trước khi upload Google Play</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span>⚡</span><span class="card-title">Cách sử dụng</span></div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;text-align:center">
+              <div style="padding:1rem;background:var(--bg3);border-radius:var(--radius)">
+                <div style="font-size:2rem;margin-bottom:0.5rem">📤</div>
+                <div style="font-weight:600;color:var(--txt0);font-size:0.85rem;margin-bottom:0.25rem">Bước 1: Upload</div>
+                <div style="color:var(--txt3);font-size:0.75rem">Kéo thả hoặc chọn file APK/AAB</div>
+              </div>
+              <div style="padding:1rem;background:var(--bg3);border-radius:var(--radius)">
+                <div style="font-size:2rem;margin-bottom:0.5rem">🔬</div>
+                <div style="font-weight:600;color:var(--txt0);font-size:0.85rem;margin-bottom:0.25rem">Bước 2: Phân tích</div>
+                <div style="color:var(--txt3);font-size:0.75rem">Tool tự động quét ELF headers</div>
+              </div>
+              <div style="padding:1rem;background:var(--bg3);border-radius:var(--radius)">
+                <div style="font-size:2rem;margin-bottom:0.5rem">📊</div>
+                <div style="font-weight:600;color:var(--txt0);font-size:0.85rem;margin-bottom:0.25rem">Bước 3: Kết quả</div>
+                <div style="color:var(--txt3);font-size:0.75rem">Xem báo cáo + hướng dẫn sửa lỗi</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="homeRecentSection" style="display:none;margin-top:1.25rem">
+          <div class="card">
+            <div class="card-header"><span>🕐</span><span class="card-title">Phân tích gần đây</span></div>
+            <div class="card-body" id="homeRecentBody">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: CHECKER ════════════════════════════════════ -->
+    <div id="page-checker" class="page">
+      <div style="max-width: 700px">
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="card-header"><span>📤</span><span class="card-title">Upload file APK / AAB</span></div>
+          <div class="card-body">
+
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+              <span class="drop-icon" id="dropIcon">📱</span>
+              <div class="drop-title" id="dropTitle">Kéo thả file vào đây</div>
+              <div class="drop-sub" id="dropSub">hoặc click để chọn file từ máy tính</div>
+              <div class="drop-formats">
+                <span class="fmt-badge">.apk</span>
+                <span class="fmt-badge">.aab</span>
+                <span style="color:var(--txt3);font-size:0.75rem;align-self:center">Tối đa 500MB</span>
+              </div>
+            </div>
+            <input type="file" id="fileInput" accept=".apk,.aab" onchange="handleFileSelect(event)">
+
+            <!-- Progress -->
+            <div class="progress-section" id="progressSection">
+              <div class="progress-header">
+                <span class="progress-label" id="progressLabel">Đang chuẩn bị...</span>
+                <span class="progress-pct" id="progressPct">0%</span>
+              </div>
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progressFill"></div>
+              </div>
+              <div class="progress-steps mt-sm">
+                <span class="step-pill active" id="step1">📦 Giải nén</span>
+                <span class="step-pill"        id="step2">🔬 Phân tích ELF</span>
+                <span class="step-pill"        id="step3">📊 Tổng hợp</span>
+                <span class="step-pill"        id="step4">✅ Hoàn tất</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="card" id="checkerResultPreview" style="display:none">
+          <div class="card-header"><span>✅</span><span class="card-title">Phân tích hoàn tất</span></div>
+          <div class="card-body">
+            <div id="quickSummary"></div>
+            <div class="mt" style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="navigate('results')">📊 Xem kết quả chi tiết</button>
+              <button class="btn btn-ghost"   onclick="navigate('logs')">📋 Xem logs</button>
+              <button class="btn btn-ghost"   onclick="resetChecker()">🔄 Phân tích lại</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt" style="border-color:var(--border2)">
+          <div class="card-header"><span>💡</span><span class="card-title">Lưu ý</span></div>
+          <div class="card-body">
+            <ul style="list-style:none;display:grid;gap:0.5rem">
+              <li style="color:var(--txt2);font-size:0.82rem;display:flex;gap:0.5rem"><span style="color:var(--blue)">•</span>File được xử lý <strong style="color:var(--txt0)">ngay trong trình duyệt</strong>, không upload lên server bên ngoài</li>
+              <li style="color:var(--txt2);font-size:0.82rem;display:flex;gap:0.5rem"><span style="color:var(--blue)">•</span>Hỗ trợ ABIs: <code>arm64-v8a</code>, <code>armeabi-v7a</code>, <code>x86</code>, <code>x86_64</code></li>
+              <li style="color:var(--txt2);font-size:0.82rem;display:flex;gap:0.5rem"><span style="color:var(--yellow)">•</span>Google Play bắt buộc từ <strong style="color:var(--txt0)">11/2025</strong> (app mới)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: RESULTS ════════════════════════════════════ -->
+    <div id="page-results" class="page">
+      <div id="resultsEmpty" class="empty-state">
+        <div class="empty-icon">📊</div>
+        <div class="empty-title">Chưa có kết quả phân tích</div>
+        <div class="empty-sub">Hãy upload file APK/AAB để bắt đầu</div>
+        <button class="btn btn-primary mt" onclick="navigate('checker')">🔍 Kiểm tra ngay</button>
+      </div>
+
+      <div id="resultsContent" style="display:none">
+        <!-- Overall banner -->
+        <div class="overall-banner" id="overallBanner">
+          <div class="overall-icon" id="overallIcon">✅</div>
+          <div class="overall-text">
+            <div class="overall-title" id="overallTitle">—</div>
+            <div class="overall-sub" id="overallSub">—</div>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="exportReport('json')">⬇️ JSON</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportReport('markdown')">⬇️ MD</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportReport('html')">⬇️ HTML</button>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('checker');resetChecker()">🔄 Phân tích lại</button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <!-- Table card -->
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="filter-bar" id="filterBar">
+            <button class="filter-btn active" onclick="setFilter('all',this)">Tất cả</button>
+            <button class="filter-btn f-ok"   onclick="setFilter('compatible',this)">✅ Tương thích</button>
+            <button class="filter-btn f-warn" onclick="setFilter('warning',this)">⚠️ Cảnh báo</button>
+            <button class="filter-btn f-fail" onclick="setFilter('incompatible',this)">❌ Lỗi</button>
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input class="search-input" type="text" placeholder="Tìm thư viện..." oninput="filterTable(this.value)" id="searchInput">
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Thư viện</th>
+                  <th>ABI</th>
+                  <th>Loại</th>
+                  <th>Alignment</th>
+                  <th>Trạng thái</th>
+                  <th>Mô tả & Hướng dẫn</th>
+                </tr>
+              </thead>
+              <tbody id="resultsTableBody"></tbody>
+            </table>
+          </div>
+          <div id="tableEmpty" style="display:none" class="empty-state" style="padding:2rem">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-sub">Không tìm thấy kết quả phù hợp</div>
+          </div>
+        </div>
+
+        <!-- Fix guide -->
+        <div class="card" id="fixGuideCard" style="display:none;margin-bottom:1.25rem">
+          <div class="card-header"><span>🔧</span><span class="card-title">Hướng dẫn sửa lỗi 16KB Page Size</span></div>
+          <div class="card-body">
+            <p style="color:var(--txt2);font-size:0.83rem;margin-bottom:1rem">
+              Thêm flag sau vào linker để rebuild với 16KB alignment:
+            </p>
+            <div class="fix-guide">
+              <div class="fix-item">
+                <div class="fix-item-title">🔨 NDK / Clang (khuyến nghị)</div>
+                <div class="fix-code">-Wl,-z,max-page-size=16384<button class="copy-btn" onclick="copyText('-Wl,-z,max-page-size=16384',this)">copy</button></div>
+              </div>
+              <div class="fix-item">
+                <div class="fix-item-title">📄 Android.mk</div>
+                <div class="fix-code">LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384<button class="copy-btn" onclick="copyText('LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384',this)">copy</button></div>
+              </div>
+              <div class="fix-item">
+                <div class="fix-item-title">🏗️ CMakeLists.txt</div>
+                <div class="fix-code">target_link_options(${TARGET} PRIVATE -Wl,-z,max-page-size=16384)<button class="copy-btn" onclick="copyText('target_link_options(${TARGET} PRIVATE -Wl,-z,max-page-size=16384)',this)">copy</button></div>
+              </div>
+              <div class="fix-item">
+                <div class="fix-item-title">🎮 Unity IL2CPP (Project Settings → Player → Android)</div>
+                <div class="fix-code">Additional IL2CPP Arguments: -Wl,-z,max-page-size=16384<button class="copy-btn" onclick="copyText('-Wl,-z,max-page-size=16384',this)">copy</button></div>
+              </div>
+              <div class="fix-item">
+                <div class="fix-item-title">📦 app/build.gradle</div>
+                <div class="fix-code" style="white-space:pre">android {
+  defaultConfig {
+    externalNativeBuild {
+      cmake { arguments "-DANDROID_LDFLAGS=-Wl,-z,max-page-size=16384" }
+    }
+  }
+}<button class="copy-btn" onclick="copyText('android {\n  defaultConfig {\n    externalNativeBuild {\n      cmake { arguments \"-DANDROID_LDFLAGS=-Wl,-z,max-page-size=16384\" }\n    }\n  }\n}',this)">copy</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: LOGS ════════════════════════════════════════ -->
+    <div id="page-logs" class="page">
+      <div class="card">
+        <div class="card-header" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:0.6rem">
+            <span>📋</span><span class="card-title">Nhật ký phân tích</span>
+            <span class="tag" id="logCount" style="margin-left:0.3rem">0 dòng</span>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-ghost btn-sm" onclick="copyLogs()">📋 Sao chép</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearLogs()">🗑️ Xóa</button>
+          </div>
+        </div>
+        <div class="log-container" id="logContainer">
+          <div class="log-line log-info">— Chưa có log. Hãy phân tích một file APK/AAB. —</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: SETTINGS ═══════════════════════════════════ -->
+    <div id="page-settings" class="page">
+      <div style="max-width:560px">
+        <div class="card">
+          <div class="card-header"><span>⚙️</span><span class="card-title">Cài đặt chung</span></div>
+          <div class="card-body">
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-label">Hiện gợi ý sửa lỗi</div>
+                <div class="setting-desc">Tự động hiển thị hướng dẫn fix khi có thư viện không tương thích</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="settingShowFix" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-label">Tự chuyển sang trang kết quả</div>
+                <div class="setting-desc">Sau khi phân tích xong, tự động chuyển sang trang Kết quả phân tích</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="settingAutoNav" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-label">Lưu log chi tiết</div>
+                <div class="setting-desc">Ghi lại toàn bộ quá trình phân tích ELF vào trang Logs</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="settingVerboseLogs" checked><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt">
+          <div class="card-header"><span>🎨</span><span class="card-title">Giao diện</span></div>
+          <div class="card-body">
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-label">Phiên bản</div>
+                <div class="setting-desc">APK 16KB Page Size Checker v1.0.0</div>
+              </div>
+              <span class="tag">v1.0.0</span>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info">
+                <div class="setting-label">Xóa dữ liệu</div>
+                <div class="setting-desc">Xóa toàn bộ kết quả phân tích và logs trong phiên này</div>
+              </div>
+              <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑️ Xóa tất cả</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: GUIDE ════════════════════════════════════════ -->
+    <div id="page-guide" class="page">
+      <div style="max-width:720px">
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="card-header"><span>📖</span><span class="card-title">Tổng quan về 16KB Page Size</span></div>
+          <div class="card-body" style="line-height:1.8;color:var(--txt2);font-size:0.85rem">
+            <p>Android 15 (API 35) giới thiệu hỗ trợ <strong style="color:var(--blue)">16KB memory page size</strong>. Các thiết bị dùng chip ARM mới (Cortex-X) có thể hoạt động ở chế độ 16KB page để:</p>
+            <ul style="margin:0.75rem 0 0.75rem 1.2rem;list-style:disc">
+              <li>Giảm TLB miss → tăng hiệu năng CPU</li>
+              <li>Cải thiện thời gian khởi động app</li>
+              <li>Tối ưu cache hiệu quả hơn</li>
+            </ul>
+            <p>Nếu native library (<code>.so</code>) không được compile với 16KB alignment, app sẽ <strong style="color:var(--red)">bị từ chối trên Google Play</strong> hoặc crash trên thiết bị 16KB.</p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="card-header"><span>🔍</span><span class="card-title">Cách kiểm tra</span></div>
+          <div class="card-body">
+            <p style="color:var(--txt2);font-size:0.83rem;margin-bottom:1rem">Dùng <code>readelf</code> để kiểm tra LOAD segment alignment:</p>
+            <div class="fix-code" style="white-space:pre;position:relative">readelf -l libfoo.so | grep LOAD
+<button class="copy-btn" onclick="copyText('readelf -l libfoo.so | grep LOAD',this)">copy</button></div>
+            <p style="color:var(--txt2);font-size:0.83rem;margin-top:1rem">Nếu cột <code>Align</code> là <strong style="color:var(--green)">0x4000</strong> (16384) → ✅ OK<br>Nếu là <strong style="color:var(--red)">0x1000</strong> (4096) → ❌ Cần rebuild</p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:1.25rem">
+          <div class="card-header"><span>🎮</span><span class="card-title">Unity IL2CPP — Hướng dẫn sửa</span></div>
+          <div class="card-body" style="display:grid;gap:0.75rem">
+            <div class="fix-item">
+              <div class="fix-item-title">1️⃣ Unity 2022.3 LTS / 2023 / 6000</div>
+              <p style="color:var(--txt2);font-size:0.8rem;margin-bottom:0.5rem">Project Settings → Player → Android → Publishing Settings → Additional IL2CPP arguments:</p>
+              <div class="fix-code">-Wl,-z,max-page-size=16384</div>
+            </div>
+            <div class="fix-item">
+              <div class="fix-item-title">2️⃣ Qua baseProjectTemplate.gradle</div>
+              <div class="fix-code" style="white-space:pre">android {
+  defaultConfig {
+    externalNativeBuild {
+      cmake {
+        arguments "-DANDROID_LDFLAGS=-Wl,-z,max-page-size=16384"
+      }
+    }
+  }
+}</div>
+            </div>
+            <div class="fix-item">
+              <div class="fix-item-title">3️⃣ Kiểm tra sau khi build</div>
+              <div class="fix-code">python3 apk16kb_checker.py MyGame.apk</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span>⚠️</span><span class="card-title">Timeline Google Play</span></div>
+          <div class="card-body">
+            <div style="display:grid;gap:0.5rem">
+              <div style="display:flex;align-items:center;gap:1rem;padding:0.7rem;background:var(--bg3);border-radius:var(--radius)">
+                <span style="font-size:1.5rem;width:40px;text-align:center">📅</span>
+                <div><div style="color:var(--txt0);font-weight:600;font-size:0.85rem">11/2025</div><div style="color:var(--txt2);font-size:0.78rem">App mới upload phải hỗ trợ 16KB</div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:1rem;padding:0.7rem;background:var(--bg3);border-radius:var(--radius)">
+                <span style="font-size:1.5rem;width:40px;text-align:center">🔄</span>
+                <div><div style="color:var(--txt0);font-weight:600;font-size:0.85rem">6/2026</div><div style="color:var(--txt2);font-size:0.78rem">App update (existing) phải hỗ trợ 16KB</div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:1rem;padding:0.7rem;background:var(--green-bg);border-radius:var(--radius);border:1px solid #1d4d2e">
+                <span style="font-size:1.5rem;width:40px;text-align:center">✅</span>
+                <div><div style="color:var(--green);font-weight:600;font-size:0.85rem">Hành động ngay</div><div style="color:var(--txt2);font-size:0.78rem">Dùng tool này để kiểm tra trước khi bị reject</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ─── INLINE PYTHON WORKER (WebAssembly approach for offline) ────────────── -->
+<!-- We use a pure JS ELF parser since we can't run Python in browser directly -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let currentReport   = null;
+let currentFilter   = 'all';
+let allLibraries    = [];
+let analysisRunning = false;
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════
+const pageMeta = {
+  home:     { title: '🏠 Trang chủ',           sub: 'Tổng quan công cụ kiểm tra 16KB page size' },
+  checker:  { title: '🔍 Kiểm tra APK/AAB',    sub: 'Upload file APK hoặc AAB để phân tích' },
+  results:  { title: '📊 Kết quả phân tích',   sub: 'Chi tiết tương thích native libraries' },
+  logs:     { title: '📋 Logs',                sub: 'Nhật ký quá trình phân tích' },
+  settings: { title: '⚙️ Cài đặt',             sub: 'Tùy chỉnh công cụ' },
+  guide:    { title: '📖 Hướng dẫn',           sub: 'Tài liệu về 16KB page size' },
+};
+
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const target = document.getElementById('page-' + page);
+  if (target) target.classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`))
+      n.classList.add('active');
+  });
+
+  const meta = pageMeta[page] || {};
+  document.getElementById('topbarTitle').textContent = meta.title || page;
+  document.getElementById('topbarSub').textContent   = meta.sub || '';
+
+  // Show export buttons only on results
+  const exportBtns = document.getElementById('exportBtns');
+  if (exportBtns) exportBtns.style.display = (page === 'results' && currentReport) ? 'flex' : 'none';
+
+  if (page === 'results') renderResults();
+  if (page === 'logs')    updateLogCount();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PURE JS ELF PARSER
+//  Parses ELF PT_LOAD segment alignment without Python
+// ═══════════════════════════════════════════════════════════════════════════
+const ELF_MAGIC     = [0x7f, 0x45, 0x4c, 0x46];
+const ELFCLASS32    = 1;
+const ELFCLASS64    = 2;
+const ELFDATA2LSB   = 1;
+const ELFDATA2MSB   = 2;
+const PT_LOAD       = 1;
+const PAGE_16KB     = 16384;
+const PAGE_4KB      = 4096;
+
+function readU16(view, off, le) { return view.getUint16(off, le); }
+function readU32(view, off, le) { return view.getUint32(off, le); }
+function readU64(view, off, le) {
+  // JS can't handle 64-bit ints safely; read as two 32-bit parts
+  const lo = view.getUint32(off,   le);
+  const hi = view.getUint32(off+4, le);
+  return hi * 0x100000000 + lo;
+}
+
+function parseElfAlignment(buffer) {
+  const u8   = new Uint8Array(buffer);
+  const view = new DataView(buffer);
+
+  // Check magic
+  if (u8[0]!==0x7f||u8[1]!==0x45||u8[2]!==0x4c||u8[3]!==0x46) return { valid:false };
+
+  const elfClass = u8[4];
+  const elfData  = u8[5];
+  const is64     = elfClass === ELFCLASS64;
+  const le       = elfData  === ELFDATA2LSB;
+
+  let e_phoff, e_phnum, e_phentsize;
+
+  try {
+    if (is64) {
+      // 64-bit ELF header fields at known offsets
+      e_phoff     = Number(readU64(view, 32, le));   // offset 32
+      e_phentsize = readU16(view, 54, le);            // offset 54
+      e_phnum     = readU16(view, 56, le);            // offset 56
+    } else {
+      // 32-bit
+      e_phoff     = readU32(view, 28, le);            // offset 28
+      e_phentsize = readU16(view, 42, le);            // offset 42
+      e_phnum     = readU16(view, 44, le);            // offset 44
+    }
+  } catch(e) { return { valid:true, is64, alignment:0, error:'Header parse error' }; }
+
+  let maxAlign = 0;
+  let minAlign = Infinity;
+  let loadCount = 0;
+  const segments = [];
+
+  for (let i=0; i<e_phnum; i++) {
+    const off = e_phoff + i * e_phentsize;
+    if (off + e_phentsize > buffer.byteLength) break;
+    try {
+      let p_type, p_align;
+      if (is64) {
+        p_type  = readU32(view, off,    le);
+        p_align = Number(readU64(view, off+48, le)); // p_align at +48 in 64-bit phdr
+      } else {
+        p_type  = readU32(view, off,    le);
+        p_align = readU32(view, off+28, le);         // p_align at +28 in 32-bit phdr
+      }
+      segments.push({ p_type, p_align });
+      if (p_type === PT_LOAD) {
+        loadCount++;
+        if (p_align > maxAlign) maxAlign = p_align;
+        if (p_align < minAlign) minAlign = p_align;
+      }
+    } catch(e) { break; }
+  }
+
+  if (loadCount === 0) minAlign = 0;
+  return { valid:true, is64, le, alignment: maxAlign, minAlign, loadCount, segments };
+}
+
+function checkCompatibility(elfResult, abi) {
+  if (!elfResult.valid) return { status:'unknown', icon:'❓', label:'Không hợp lệ', desc:'Không phải ELF', fix:'' };
+  const a = elfResult.alignment;
+  if (a === 0) return { status:'unknown', icon:'❓', label:'Không xác định', desc:'Không có LOAD segment', fix:'' };
+  if (a >= PAGE_16KB) return { status:'compatible', icon:'✅', label:'Tương thích', desc:`Alignment: ${a.toLocaleString()}B (${a/1024}KB)`, fix:'' };
+  if (a === PAGE_4KB) {
+    const fix = abi === 'arm64-v8a'
+      ? 'Rebuild với: -Wl,-z,max-page-size=16384\nAndroid.mk: LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384\nCMake: target_link_options(${TARGET} PRIVATE -Wl,-z,max-page-size=16384)'
+      : `ABI ${abi}: nên cập nhật -Wl,-z,max-page-size=16384`;
+    return { status:'incompatible', icon:'❌', label:'Không tương thích', desc:`Alignment: ${a}B (4KB) — Cần 16KB`, fix };
+  }
+  return { status:'warning', icon:'⚠️', label:'Cảnh báo', desc:`Alignment: ${a.toLocaleString()}B — Không phổ biến`, fix:'Kiểm tra lại -Wl,-z,max-page-size=16384' };
+}
+
+function detectAbi(path) {
+  if (path.includes('arm64-v8a'))   return 'arm64-v8a';
+  if (path.includes('armeabi-v7a')) return 'armeabi-v7a';
+  if (path.includes('x86_64'))      return 'x86_64';
+  if (path.includes('x86'))         return 'x86';
+  return 'unknown';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  APK/AAB PROCESSING (JSZip fallback → native unzip approach)
+// ═══════════════════════════════════════════════════════════════════════════
+// We use a simple ZIP parser since JSZip may not be available.
+// For full functionality, load JSZip from CDN or local.
+
+async function loadJSZip() {
+  // Try to load JSZip dynamically
+  if (window.JSZip) return window.JSZip;
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = () => resolve(window.JSZip);
+    s.onerror = () => reject(new Error('Không tải được JSZip'));
+    document.head.appendChild(s);
+  });
+}
+
+async function analyzeFile(file) {
+  if (analysisRunning) return;
+  analysisRunning = true;
+
+  const logs = [];
+  const timestamp = new Date().toISOString();
+  const log = (msg, cls='') => { logs.push({ msg, cls }); };
+
+  log(`🚀 Bắt đầu phân tích: ${file.name}`, 'log-info');
+  log(`📏 Kích thước: ${(file.size/1024/1024).toFixed(2)} MB`, 'log-info');
+  log(`⏰ Thời gian: ${new Date().toLocaleString('vi-VN')}`, '');
+  log('─'.repeat(45), '');
+
+  setProgress(5, 'Đang tải JSZip...');
+  setStep(1, 'active');
+
+  let JSZip;
+  try {
+    JSZip = await loadJSZip();
+    log('✅ JSZip loaded thành công', 'log-ok');
+  } catch(e) {
+    log(`❌ Lỗi tải JSZip: ${e.message}`, 'log-err');
+    log('💡 Kiểm tra kết nối internet', 'log-warn');
+    showError('Không tải được thư viện JSZip. Cần kết nối internet lần đầu.');
+    analysisRunning = false;
+    return;
+  }
+
+  setProgress(15, 'Đang đọc file...');
+
+  let arrayBuffer;
+  try {
+    arrayBuffer = await file.arrayBuffer();
+    log(`✅ Đọc file OK: ${arrayBuffer.byteLength.toLocaleString()} bytes`, 'log-ok');
+  } catch(e) {
+    log(`❌ Lỗi đọc file: ${e.message}`, 'log-err');
+    showError('Không đọc được file: ' + e.message);
+    analysisRunning = false;
+    return;
+  }
+
+  setProgress(25, 'Đang giải nén...');
+  setStep(1, 'active'); setStep(2, '');
+
+  let zip;
+  try {
+    zip = await JSZip.loadAsync(arrayBuffer);
+    const allFiles = Object.keys(zip.files);
+    log(`📋 Tổng files trong archive: ${allFiles.length}`, '');
+  } catch(e) {
+    log(`❌ Không giải nén được: ${e.message}`, 'log-err');
+    showError('File không phải APK/AAB hợp lệ: ' + e.message);
+    analysisRunning = false;
+    return;
+  }
+
+  // Find .so files
+  const soEntries = Object.entries(zip.files).filter(([path, f]) =>
+    !f.dir && path.endsWith('.so') && !path.includes('__MACOSX')
+  );
+
+  log(`🔍 Tìm thấy ${soEntries.length} file .so`, soEntries.length > 0 ? '' : 'log-warn');
+
+  if (soEntries.length === 0) {
+    log('⚠️ Không tìm thấy file .so trong APK/AAB này', 'log-warn');
+    log('💡 APK thuần Java/Kotlin không cần kiểm tra 16KB page size', 'log-info');
+  }
+
+  setStep(1, 'done'); setStep(2, 'active');
+  log('─'.repeat(45), '');
+  log('🔬 Phân tích ELF headers...', 'log-step');
+
+  const libraries = [];
+  const total = soEntries.length;
+
+  for (let i=0; i<soEntries.length; i++) {
+    const [path, zipEntry] = soEntries[i];
+    const name = path.split('/').pop();
+    const abi  = detectAbi(path);
+    const pct  = 30 + Math.floor((i / total) * 55);
+
+    setProgress(pct, `Phân tích: ${name}`);
+    log(`  → ${path} [${abi}]`, '');
+
+    let soData;
+    try {
+      soData = await zipEntry.async('arraybuffer');
+    } catch(e) {
+      log(`     ⚠️ Lỗi đọc: ${e.message}`, 'log-warn');
+      libraries.push({ name, path, abi, fileSize: 0, is64bit: false, pageAlignment: 0, status:'unknown', statusIcon:'❓', statusLabel:'Lỗi đọc', description: e.message, fixSuggestion:'', errorMessage: e.message, segmentCount:0, loadSegmentCount:0 });
+      continue;
+    }
+
+    const elfResult = parseElfAlignment(soData);
+    const compat    = checkCompatibility(elfResult, abi);
+
+    log(`     ${compat.icon} ${compat.label} | Align: ${elfResult.alignment?.toLocaleString() || 'N/A'}B | ${elfResult.is64 ? '64-bit' : '32-bit'}`,
+        compat.status === 'compatible' ? 'log-ok' : compat.status === 'incompatible' ? 'log-err' : 'log-warn');
+
+    libraries.push({
+      name,
+      path,
+      abi,
+      fileSize: soData.byteLength,
+      is64bit: !!elfResult.is64,
+      pageAlignment: elfResult.alignment || 0,
+      status: compat.status,
+      statusIcon: compat.icon,
+      statusLabel: compat.label,
+      description: compat.desc,
+      fixSuggestion: compat.fix,
+      errorMessage: elfResult.error || '',
+      segmentCount: elfResult.segments ? elfResult.segments.length : 0,
+      loadSegmentCount: elfResult.loadCount || 0,
+    });
+  }
+
+  setStep(2, 'done'); setStep(3, 'active');
+  setProgress(90, 'Tổng hợp kết quả...');
+
+  // Tally
+  const compatible   = libraries.filter(l => l.status === 'compatible').length;
+  const warning      = libraries.filter(l => l.status === 'warning').length;
+  const incompatible = libraries.filter(l => l.status === 'incompatible').length;
+  const unknown      = libraries.filter(l => l.status === 'unknown').length;
+
+  let overallStatus, summary;
+  if (incompatible > 0) {
+    overallStatus = 'incompatible';
+    summary = `❌ KHÔNG TƯƠNG THÍCH: ${incompatible} thư viện cần rebuild với 16KB alignment`;
+  } else if (warning > 0) {
+    overallStatus = 'warning';
+    summary = `⚠️ CÓ CẢNH BÁO: ${warning} thư viện cần kiểm tra lại`;
+  } else if (compatible > 0) {
+    overallStatus = 'compatible';
+    summary = `✅ TƯƠNG THÍCH: Tất cả ${compatible} thư viện hỗ trợ 16KB page size`;
+  } else {
+    overallStatus = 'unknown';
+    summary = total === 0 ? '📦 Không có native library trong file này' : '❓ Không xác định được trạng thái';
+  }
+
+  log('─'.repeat(45), '');
+  log(`📊 Tổng: ${total} | ✅ ${compatible} | ⚠️ ${warning} | ❌ ${incompatible} | ❓ ${unknown}`, 'log-info');
+  log(summary, overallStatus === 'compatible' ? 'log-ok' : overallStatus === 'incompatible' ? 'log-err' : 'log-warn');
+  log('─'.repeat(45), '');
+  log('🏁 Phân tích hoàn tất!', 'log-ok');
+
+  const report = {
+    file_name: file.name,
+    file_type: file.name.endsWith('.aab') ? 'aab' : 'apk',
+    file_size: file.size,
+    analysis_time: timestamp,
+    total_libraries: total,
+    compatible_count: compatible,
+    warning_count: warning,
+    incompatible_count: incompatible,
+    unknown_count: unknown,
+    libraries,
+    logs: logs.map(l => l.msg),
+    overall_status: overallStatus,
+    summary,
+  };
+
+  currentReport = report;
+  allLibraries  = [...libraries];
+
+  // Save to log page
+  appendLogs(logs);
+
+  // Update badge
+  const badge = document.getElementById('navBadge');
+  if (incompatible > 0) {
+    badge.textContent = incompatible;
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  setStep(3, 'done'); setStep(4, 'done');
+  setProgress(100, 'Hoàn tất!');
+
+  // Quick summary
+  showQuickSummary(report);
+
+  // Update home
+  updateHomeRecent(report);
+
+  setProgress(100, 'Hoàn tất!');
+  analysisRunning = false;
+
+  // Auto navigate
+  const autoNav = document.getElementById('settingAutoNav');
+  if (autoNav && autoNav.checked) {
+    setTimeout(() => navigate('results'), 800);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function setProgress(pct, label) {
+  document.getElementById('progressFill').style.width  = pct + '%';
+  document.getElementById('progressPct').textContent   = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+function setStep(n, state) {
+  const el = document.getElementById('step' + n);
+  if (!el) return;
+  el.className = 'step-pill ' + state;
+}
+
+function showQuickSummary(r) {
+  const statusMap = {
+    compatible:   { bg: 'var(--green-bg)',  color: 'var(--green)',  border: '#1d4d2e' },
+    warning:      { bg: 'var(--yellow-bg)', color: 'var(--yellow)', border: '#3d2e0d' },
+    incompatible: { bg: 'var(--red-bg)',    color: 'var(--red)',    border: '#3d1210' },
+    unknown:      { bg: 'var(--bg3)',       color: 'var(--txt2)',   border: 'var(--border2)' },
+  };
+  const s = statusMap[r.overall_status] || statusMap.unknown;
+  document.getElementById('quickSummary').innerHTML = `
+    <div style="background:${s.bg};border:1px solid ${s.border};border-radius:var(--radius);padding:0.8rem 1rem;color:${s.color}">
+      <div style="font-weight:700;font-family:'Syne',sans-serif">${r.summary}</div>
+      <div style="font-size:0.78rem;opacity:0.8;margin-top:0.2rem">
+        ${r.total_libraries} thư viện | ✅ ${r.compatible_count} | ⚠️ ${r.warning_count} | ❌ ${r.incompatible_count}
+      </div>
+    </div>`;
+  document.getElementById('checkerResultPreview').style.display = 'block';
+}
+
+function showError(msg) {
+  document.getElementById('quickSummary').innerHTML = `
+    <div style="background:var(--red-bg);border:1px solid #3d1210;border-radius:var(--radius);padding:0.8rem 1rem;color:var(--red)">
+      ❌ ${msg}
+    </div>`;
+  document.getElementById('checkerResultPreview').style.display = 'block';
+  analysisRunning = false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RENDER RESULTS
+// ═══════════════════════════════════════════════════════════════════════════
+function renderResults() {
+  if (!currentReport) {
+    document.getElementById('resultsEmpty').style.display   = 'block';
+    document.getElementById('resultsContent').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('resultsEmpty').style.display   = 'none';
+  document.getElementById('resultsContent').style.display = 'block';
+  document.getElementById('exportBtns').style.display = 'flex';
+
+  const r = currentReport;
+
+  // Overall banner
+  const banner = document.getElementById('overallBanner');
+  banner.className = 'overall-banner ' +
+    (r.overall_status === 'compatible' ? 'ok' : r.overall_status === 'incompatible' ? 'fail' : r.overall_status === 'warning' ? 'warn' : 'ok');
+  document.getElementById('overallIcon').textContent  = r.overall_status === 'compatible' ? '✅' : r.overall_status === 'incompatible' ? '❌' : r.overall_status === 'warning' ? '⚠️' : '❓';
+  document.getElementById('overallTitle').textContent = r.summary;
+  document.getElementById('overallSub').textContent   = `${r.file_name} • ${r.file_type.toUpperCase()} • ${new Date(r.analysis_time).toLocaleString('vi-VN')}`;
+
+  // Stats
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card total fade-in"><div class="stat-label">Tổng thư viện</div><div class="stat-value">${r.total_libraries}</div><div class="stat-sub">.so files</div><div class="stat-icon">📦</div></div>
+    <div class="stat-card ok fade-in"><div class="stat-label">Tương thích</div><div class="stat-value">${r.compatible_count}</div><div class="stat-sub">16KB OK</div><div class="stat-icon">✅</div></div>
+    <div class="stat-card warn fade-in"><div class="stat-label">Cảnh báo</div><div class="stat-value">${r.warning_count}</div><div class="stat-sub">Cần kiểm tra</div><div class="stat-icon">⚠️</div></div>
+    <div class="stat-card fail fade-in"><div class="stat-label">Không tương thích</div><div class="stat-value">${r.incompatible_count}</div><div class="stat-sub">Cần rebuild</div><div class="stat-icon">❌</div></div>`;
+
+  // Show fix guide if needed
+  const showFix = document.getElementById('settingShowFix');
+  const fixCard = document.getElementById('fixGuideCard');
+  if (fixCard) fixCard.style.display = (r.incompatible_count > 0 && (!showFix || showFix.checked)) ? 'block' : 'none';
+
+  renderTable(allLibraries);
+}
+
+function renderTable(libs) {
+  const tbody = document.getElementById('resultsTableBody');
+  const empty = document.getElementById('tableEmpty');
+
+  if (!libs || libs.length === 0) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'flex';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  tbody.innerHTML = libs.map(lib => {
+    const badgeClass = lib.status === 'compatible' ? 'badge-ok' : lib.status === 'incompatible' ? 'badge-fail' : lib.status === 'warning' ? 'badge-warn' : 'badge-unk';
+    const alignStr   = lib.pageAlignment > 0 ? `${lib.pageAlignment.toLocaleString()}B<br><small style="color:var(--txt3)">${lib.pageAlignment/1024}KB</small>` : 'N/A';
+    const fixHtml    = lib.fixSuggestion ? `<div class="detail-fix">${lib.fixSuggestion.replace(/\n/g,'<br>')}</div>` : '';
+    const sizeStr    = lib.fileSize > 0 ? `(${(lib.fileSize/1024).toFixed(1)}KB)` : '';
+
+    return `<tr class="fade-in">
+      <td><div class="lib-name">${lib.name}</div><div style="color:var(--txt3);font-size:0.7rem;margin-top:0.15rem">${lib.path}</div></td>
+      <td><span class="abi-badge">${lib.abi}</span></td>
+      <td style="color:var(--txt2);font-size:0.78rem">${lib.is64bit ? '64-bit' : '32-bit'}</td>
+      <td class="align-val">${alignStr}</td>
+      <td><span class="badge ${badgeClass}">${lib.statusIcon} ${lib.statusLabel}</span></td>
+      <td class="row-detail"><div class="detail-desc">${lib.description} <span style="color:var(--txt3)">${sizeStr}</span></div>${fixHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  FILTER
+// ═══════════════════════════════════════════════════════════════════════════
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function filterTable(query) {
+  applyFilters(query);
+}
+
+function applyFilters(query) {
+  if (query === undefined) query = document.getElementById('searchInput')?.value || '';
+  const q = query.toLowerCase().trim();
+
+  let filtered = allLibraries;
+  if (currentFilter !== 'all') filtered = filtered.filter(l => l.status === currentFilter);
+  if (q) filtered = filtered.filter(l => l.name.toLowerCase().includes(q) || l.abi.toLowerCase().includes(q) || l.path.toLowerCase().includes(q));
+
+  renderTable(filtered);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  DRAG & DROP
+// ═══════════════════════════════════════════════════════════════════════════
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['apk','aab'].includes(ext)) {
+    alert('Chỉ hỗ trợ file .apk hoặc .aab');
+    return;
+  }
+
+  // Update drop zone UI
+  document.getElementById('dropIcon').textContent  = ext === 'aab' ? '📦' : '📱';
+  document.getElementById('dropTitle').textContent = file.name;
+  document.getElementById('dropSub').textContent   = `${(file.size/1024/1024).toFixed(2)} MB • ${ext.toUpperCase()}`;
+  document.getElementById('progressSection').classList.add('visible');
+  document.getElementById('checkerResultPreview').style.display = 'none';
+
+  // Reset steps
+  ['step1','step2','step3','step4'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.className = 'step-pill';
+  });
+
+  analyzeFile(file);
+}
+
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', e => { dropZone.classList.remove('dragover'); });
+dropZone.addEventListener('drop',      e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LOGS
+// ═══════════════════════════════════════════════════════════════════════════
+function appendLogs(logEntries) {
+  const container = document.getElementById('logContainer');
+  const wasEmpty  = container.querySelector('.log-line.log-info')?.textContent?.includes('Chưa có log');
+  if (wasEmpty) container.innerHTML = '';
+
+  logEntries.forEach(({ msg, cls }) => {
+    const line = document.createElement('div');
+    line.className = 'log-line ' + (cls || '');
+    line.textContent = msg;
+    container.appendChild(line);
+  });
+
+  container.scrollTop = container.scrollHeight;
+  updateLogCount();
+}
+
+function updateLogCount() {
+  const lines = document.querySelectorAll('#logContainer .log-line').length;
+  const el = document.getElementById('logCount');
+  if (el) el.textContent = lines + ' dòng';
+}
+
+function copyLogs() {
+  const text = [...document.querySelectorAll('#logContainer .log-line')].map(l => l.textContent).join('\n');
+  navigator.clipboard.writeText(text).then(() => showToast('Đã sao chép logs!'));
+}
+
+function clearLogs() {
+  document.getElementById('logContainer').innerHTML = '<div class="log-line log-info">— Logs đã được xóa. —</div>';
+  updateLogCount();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════════════════════════
+function exportReport(format) {
+  if (!currentReport) { alert('Chưa có báo cáo để export.'); return; }
+  const r = currentReport;
+  let content, mime, ext;
+
+  if (format === 'json') {
+    content = JSON.stringify(r, null, 2);
+    mime = 'application/json'; ext = 'json';
+  } else if (format === 'markdown') {
+    content = buildMarkdown(r);
+    mime = 'text/markdown'; ext = 'md';
+  } else if (format === 'html') {
+    content = buildHtmlReport(r);
+    mime = 'text/html'; ext = 'html';
+  }
+
+  const blob = new Blob([content], { type: mime });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = r.file_name.replace(/\.[^.]+$/,'') + '_16kb_report.' + ext;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Đã export ${ext.toUpperCase()}!`);
+}
+
+function buildMarkdown(r) {
+  const lines = [
+    `# Báo cáo Kiểm tra 16KB Page Size`,``,
+    `**File:** \`${r.file_name}\`  `,
+    `**Loại:** ${r.file_type.toUpperCase()}  `,
+    `**Thời gian:** ${new Date(r.analysis_time).toLocaleString('vi-VN')}  `,
+    `**Kết quả:** ${r.summary}`,``,
+    `## Tổng quan`,``,
+    `| | Số lượng |`,`|---|---|`,
+    `| Tổng thư viện | ${r.total_libraries} |`,
+    `| ✅ Tương thích | ${r.compatible_count} |`,
+    `| ⚠️ Cảnh báo | ${r.warning_count} |`,
+    `| ❌ Không tương thích | ${r.incompatible_count} |`,``,
+    `## Chi tiết`,``,
+    `| Thư viện | ABI | Alignment | Trạng thái | Mô tả |`,
+    `|---|---|---|---|---|`,
+    ...r.libraries.map(l => `| \`${l.name}\` | ${l.abi} | ${l.pageAlignment > 0 ? l.pageAlignment.toLocaleString()+'B' : 'N/A'} | ${l.statusIcon} ${l.statusLabel} | ${l.description} |`),
+    ``,`## Hướng dẫn sửa lỗi`,``,
+    `\`\`\``,`-Wl,-z,max-page-size=16384`,`\`\`\``,
+  ];
+  return lines.join('\n');
+}
+
+function buildHtmlReport(r) {
+  const statusColors = { compatible:'#3fb950', warning:'#d29922', incompatible:'#f85149', unknown:'#6b7280' };
+  const rows = r.libraries.map(l => {
+    const c = statusColors[l.status] || '#6b7280';
+    const align = l.pageAlignment > 0 ? `${l.pageAlignment.toLocaleString()}B` : 'N/A';
+    return `<tr><td><code>${l.name}</code></td><td>${l.abi}</td><td>${l.is64bit?'64-bit':'32-bit'}</td><td style="font-family:monospace">${align}</td><td><span style="background:${c}20;color:${c};padding:0.2rem 0.5rem;border-radius:4px;font-size:0.8rem">${l.statusIcon} ${l.statusLabel}</span></td><td>${l.description}${l.fixSuggestion ? `<pre style="background:#000;padding:0.4rem;border-radius:4px;color:#fbbf24;font-size:0.72rem;margin-top:0.3rem">${l.fixSuggestion}</pre>` : ''}</td></tr>`;
+  }).join('');
+  return `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>16KB Report - ${r.file_name}</title><style>body{font-family:system-ui;background:#0d1117;color:#c9d1d9;padding:2rem}table{width:100%;border-collapse:collapse;background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden}th{background:#0d1117;padding:.6rem 1rem;text-align:left;font-size:.75rem;color:#8b949e;text-transform:uppercase}td{padding:.6rem 1rem;border-bottom:1px solid #21262d;font-size:.85rem}code{background:#0d1117;padding:.1rem .3rem;border-radius:3px;color:#58a6ff}pre{white-space:pre-wrap}</style></head><body><h1 style="color:#f0f6fc">📱 Báo cáo 16KB Page Size</h1><p style="color:#8b949e">File: ${r.file_name} | ${new Date(r.analysis_time).toLocaleString('vi-VN')}</p><p style="margin:1rem 0;padding:0.6rem 1rem;background:#122520;border:1px solid #1d4d2e;border-radius:6px;color:#3fb950">${r.summary}</p><table><thead><tr><th>Thư viện</th><th>ABI</th><th>Loại</th><th>Alignment</th><th>Trạng thái</th><th>Chi tiết</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MISC
+// ═══════════════════════════════════════════════════════════════════════════
+function resetChecker() {
+  document.getElementById('dropIcon').textContent  = '📱';
+  document.getElementById('dropTitle').textContent = 'Kéo thả file vào đây';
+  document.getElementById('dropSub').textContent   = 'hoặc click để chọn file từ máy tính';
+  document.getElementById('progressSection').classList.remove('visible');
+  document.getElementById('checkerResultPreview').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  ['step1','step2','step3','step4'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.className = 'step-pill';
+  });
+  setProgress(0,'');
+  analysisRunning = false;
+}
+
+function clearAll() {
+  if (!confirm('Xóa tất cả kết quả phân tích và logs?')) return;
+  currentReport = null; allLibraries = [];
+  clearLogs(); resetChecker();
+  document.getElementById('navBadge').style.display = 'none';
+  showToast('Đã xóa tất cả dữ liệu');
+}
+
+function updateHomeRecent(r) {
+  const section = document.getElementById('homeRecentSection');
+  const body    = document.getElementById('homeRecentBody');
+  if (!section || !body) return;
+  section.style.display = 'block';
+  const statusColors = { compatible:'var(--green)', warning:'var(--yellow)', incompatible:'var(--red)', unknown:'var(--txt3)' };
+  body.innerHTML = `<div style="display:flex;align-items:center;gap:1rem;cursor:pointer" onclick="navigate('results')">
+    <div style="font-size:2rem">${r.file_type === 'aab' ? '📦' : '📱'}</div>
+    <div style="flex:1">
+      <div style="color:var(--txt0);font-weight:600;font-size:0.88rem">${r.file_name}</div>
+      <div style="color:var(--txt3);font-size:0.75rem;margin-top:0.2rem">${new Date(r.analysis_time).toLocaleString('vi-VN')} • ${r.total_libraries} thư viện</div>
+    </div>
+    <div style="color:${statusColors[r.overall_status]};font-size:1.5rem">${r.overall_status === 'compatible' ? '✅' : r.overall_status === 'incompatible' ? '❌' : '⚠️'}</div>
+  </div>`;
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'copied!';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+  });
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg2);border:1px solid var(--border2);color:var(--txt0);padding:0.6rem 1rem;border-radius:var(--radius);font-size:0.85rem;z-index:9999;animation:fadeUp 0.2s ease';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# APK 16KB Page Size Checker — Dependencies
+
+# Web server (optional, for web mode)
+flask>=2.3.0
+flask-cors>=4.0.0
+
+# Python 3.8+ required
+# No additional dependencies needed for CLI mode!
+# The ELF parser is pure Python stdlib.
